@@ -41,8 +41,28 @@ public class Controller implements Initializable {
 	private SimGUI grid;
 	private Cell gridVals[][];
 	private int count;
+	private ArrayList<MoveObs> moveObs = new ArrayList<MoveObs>();
 	
 	public enum Direction { UP, DOWN, LEFT, RIGHT }
+	
+	public class MoveObs{
+		Direction dir;
+		Cell.Type obs;
+		public MoveObs(Direction dir, Cell.Type obs){
+			this.dir = dir;
+			this.obs = obs;
+		}
+	}
+	
+	public class BestPath{
+		String s;
+		double prob;
+		public BestPath(String s, double prob){
+			this.s = s;
+			this.prob = prob;
+		}
+		
+	}
 
 	@Override
 	public void initialize(URL location, ResourceBundle resources) {
@@ -132,6 +152,7 @@ public class Controller implements Initializable {
 				gridVals[i][j].data.add(probability);
 			}
 		
+		moveObs.add(new MoveObs(directionEntered, typeEntered));
 		count++;
 		reset.setDisable(false);
 		undo.setDisable(false);
@@ -155,6 +176,7 @@ public class Controller implements Initializable {
 				gridVals[i][j].data.add(.125);
 			}
 		
+		moveObs = new ArrayList<MoveObs>();
 		count = 1;
 		reset.setDisable(true);
 		undo.setDisable(true);
@@ -171,6 +193,7 @@ public class Controller implements Initializable {
 					gridVals[i][j].data.remove(count-1);
 		
 		count--;
+		moveObs.remove(count-1);
 		if(count == 1){
 			reset.setDisable(true);
 			undo.setDisable(true);			
@@ -196,8 +219,9 @@ public class Controller implements Initializable {
 					best.add(new Point(i,j));
 			}
 		
+		Point p = null;
 		while(best.size() > 0){
-			Point p = best.remove(0);
+			p = best.remove(0);
 			if(multiple)
 				s += ", (" + p.x + "," + p.y + ")";
 			else
@@ -206,10 +230,57 @@ public class Controller implements Initializable {
 		}
 		
 		grid.setLabel1("Probability: " + val + "   " + s);
+		setBestPath(p);
 	}
 	
-	private void setBestPath(){
-		grid.setLabel2("Best Path: ");
+	private void setBestPath(Point p){
+		grid.setLabel2("Best Path to "+ printP(p) +": " + viterbi(p, count).s);
+	}
+	
+	private BestPath viterbi(Point p, int x){
+		if(!validPos(p.x, p.y))
+			return new BestPath("", 0.0);
+		
+		if(x < 2){
+			double d = gridVals[p.x][p.y].data.get(0);
+			return new BestPath("[" + printP(p) + " = "+ Double.toString(d) +"]; ", d);
+		}
+		
+		Point parent;
+		double prob;
+		BestPath bp1, bp2;
+		String s;
+				
+		switch(moveObs.get(x-2).dir){
+		case UP:	parent = new Point(p.x + 1, p.y);	break;
+		case DOWN:	parent = new Point(p.x - 1, p.y);	break;
+		case LEFT:	parent = new Point(p.x, p.y + 1);	break;
+		default:	parent = new Point(p.x, p.y - 1);
+		}
+		
+		bp1 = viterbi(p,		x - 1);
+		bp2 = viterbi(parent,	x - 1);
+		
+		if(bp1.prob * .1 > bp2.prob *.9){
+			prob = bp1.prob * .1;
+			parent =  p;
+			s = bp1.s;
+		}else{
+			prob = bp2.prob * .9;
+			s = bp2.s;
+		}
+		
+		if(moveObs.get(x-2).obs == gridVals[p.x][p.y].type)
+			prob *= .9;
+		else
+			prob *= .05;
+		
+		return new BestPath(s + "[" + printP(p) + " = "
+				+ Double.toString(prob) +"]; " ,prob);
+	}
+	
+	private String printP(Point p){
+		return "(" + p.x + "," + p.y + ")";
 	}
 	
 	private void updateCells(){
@@ -224,7 +295,7 @@ public class Controller implements Initializable {
 			}
 		
 		setBestPosition();
-		setBestPath();
+		
 	}
 	
 }

@@ -92,5 +92,9 @@ public class SimGUI extends JFrame {
 	public void setLabel2(String s){
 		label2.setText(s);
 	}
+	
+	public String getLabel2(){
+		return label2.getText();
+	}
 }
 
