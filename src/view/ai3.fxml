@@ -30,5 +30,7 @@
     <Button defaultButton="true" layoutX="202.0" layoutY="260.0" minWidth="75.0" mnemonicParsing="false" onAction="#addNext" text="ADD NEXT" />
       <Button fx:id="undo" disable="true" layoutX="117.0" layoutY="260.0" minWidth="75.0" mnemonicParsing="false" onAction="#undo" text="UNDO" />
       <Button fx:id="reset" disable="true" layoutX="30.0" layoutY="260.0" minWidth="75.0" mnemonicParsing="false" onAction="#reset" text="RESET" />
+      <Button fx:id="gtd" layoutX="194.0" layoutY="21.0" mnemonicParsing="false" onAction="#generateTruthData" text="Develop GTD" />
+      <Button layoutX="141.0" layoutY="21.0" mnemonicParsing="false" />
    </children>
 </AnchorPane>

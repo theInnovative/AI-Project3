@@ -2,6 +2,8 @@ package view;
 
 import java.awt.Color;
 import java.awt.Point;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.ResourceBundle;
@@ -37,11 +39,15 @@ public class Controller implements Initializable {
 	public Button reset;
 	@FXML
 	public Button undo;
+	@FXML
+	public Button gtd;
 
 	private SimGUI grid;
 	private Cell gridVals[][];
 	private int count;
 	private ArrayList<MoveObs> moveObs = new ArrayList<MoveObs>();
+	
+	private final static String path = "Trial Grids\\Grid-";
 	
 	public enum Direction { UP, DOWN, LEFT, RIGHT }
 	
@@ -79,6 +85,142 @@ public class Controller implements Initializable {
 		gridVals[2][2] = new Cell(2,2,Type.HIGHWAY);
 		
 		count = 1;
+	}
+	
+	public void generateTruthData(){
+		gtd.setVisible(false);
+		for(int X = 0; X < 10; X++){
+			Cell gV[][] = new Cell[20][20];
+			String moves = "", obs = "";
+			Cell.Type o;
+			ArrayList<Point> points;
+			
+			int totalLeft = 20 * 20;
+			int nCells = (int)(.5 * totalLeft);
+			int hCells = (int)(.2 * totalLeft);
+			int tCells = (int)(.2 * totalLeft);
+			
+			for(int i = 0; i < gV.length; i++){
+				for(int j = 0; j < gV[0].length; j++){
+					int x = (int)(Math.random() * totalLeft);
+					totalLeft--;
+					if(x < nCells){
+						nCells--;
+						gV[i][j] = new Cell(i,j);
+					}else if(x < nCells + hCells){
+						hCells--;
+						gV[i][j] = new Cell(i,j, Cell.Type.HIGHWAY);
+					}else if(x < nCells + hCells + tCells){
+						tCells--;
+						gV[i][j] = new Cell(i,j, Cell.Type.HARD);
+					}else{
+						gV[i][j] = new Cell(i,j, Cell.Type.BLOCKED);
+					}				
+				}
+			}
+			printGrid(X, gV);
+			
+			for(int Y = 0; Y < 10; Y++){
+				Point start;
+				points = new ArrayList<Point>();
+				do{
+					start = new Point((int)(Math.random()*20), (int)(Math.random()*20));
+				}while(!validPos(start.x,start.y));
+				points.add(start);
+				
+				Point tmp = start, next;
+				for(int i = 0; i < 100; i++){
+					switch((int)(Math.random() * 4)){
+					case 0:		moves += 'U';	next = new Point(tmp.x-1, tmp.y);	break;
+					case 1:		moves += 'D';	next = new Point(tmp.x+1, tmp.y);	break;
+					case 2:		moves += 'L';	next = new Point(tmp.x, tmp.y-1);	break;
+					default:	moves += 'R';	next = new Point(tmp.x, tmp.y+1);
+					}
+					
+					if(Math.random() >= .9 || !validPos(next.x, next.y))
+						next = tmp;
+					else
+						tmp = next;
+					points.add(next);
+					
+					o = gV[next.x][next.y].type;
+					double x = Math.random();
+					if(x < .05)
+						switch(o){
+						case NORMAL: 	obs += 'H';	break;
+						case HIGHWAY: 	obs += 'T';	break;
+						default: 		obs += 'N';	break;
+						}
+					else if(x < .1){
+						switch(o){
+						case NORMAL: 	obs += 'T';	break;
+						case HIGHWAY: 	obs += 'N';	break;
+						default: 		obs += 'H';	break;
+						}
+					}else{
+						switch(o){
+						case NORMAL: 	obs += 'N';	break;
+						case HIGHWAY: 	obs += 'H';	break;
+						default: 		obs += 'T';	break;
+						}
+					}
+					
+				}
+				printData(X,Y,moves, obs, points);
+			}
+		}
+		gtd.setVisible(true);
+	}
+	
+	private void printGrid(int x, Cell[][] gV){
+		String name = x + "\\Grid.txt";
+		FileWriter file;
+		
+		try {
+			file = new FileWriter(path + name, false);
+			for(int i = 0; i < 20; i++){
+				for(int j = 0; j < 20; j++){
+					switch(gV[i][j].type){
+					case NORMAL: 	file.write('N');	break;
+					case HARD:		file.write('T');	break;
+					case HIGHWAY:	file.write('H');	break;
+					default:		file.write('B');
+					}
+				}
+				file.write(System.getProperty("line.separator"));
+			}
+
+			file.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+	
+	private void printData(int x, int y, String m, String o, ArrayList<Point> p){
+		String name = x + "\\" + "GTD-" + y + ".txt";
+		FileWriter file;
+		
+		try {
+			file = new FileWriter(path + name, false);
+			for(int i = 0; i < 101; i++){
+				file.write(i + ": " + printP(p.remove(0)));
+				file.write(System.getProperty("line.separator"));
+			}
+			
+			for(int i = 0; i < 100; i++){
+				file.write((i + 1) + ": " + m.charAt(i));
+				file.write(System.getProperty("line.separator"));
+			}
+			
+			for(int i = 0; i < 100; i++){
+				file.write((i + 1) + ": " + o.charAt(i));
+				file.write(System.getProperty("line.separator"));
+			}
+
+			file.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 	}
 	
 	public void launchSmallGrid(){
@@ -293,9 +435,7 @@ public class Controller implements Initializable {
 					grid.setGradientColor(i,j, 
 							gridVals[i][j].data.get(count-1));
 			}
-		
 		setBestPosition();
-		
 	}
 	
 }
