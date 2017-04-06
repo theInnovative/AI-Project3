@@ -72,25 +72,13 @@ public class Controller implements Initializable {
 
 	@Override
 	public void initialize(URL location, ResourceBundle resources) {
-		gridVals = new Cell[3][3];
 		
-		gridVals[0][0] = new Cell(0,0,Type.HIGHWAY);
-		gridVals[0][1] = new Cell(0,1,Type.HIGHWAY);
-		gridVals[0][2] = new Cell(0,2,Type.HARD);
-		gridVals[1][0] = new Cell(1,0);
-		gridVals[1][1] = new Cell(1,1);
-		gridVals[1][2] = new Cell(1,2);
-		gridVals[2][0] = new Cell(2,0);
-		gridVals[2][1] = new Cell(2,1,Type.BLOCKED);
-		gridVals[2][2] = new Cell(2,2,Type.HIGHWAY);
-		
-		count = 1;
 	}
 	
 	public void generateTruthData(){
 		gtd.setVisible(false);
 		for(int X = 0; X < 10; X++){
-			Cell gV[][] = new Cell[20][20];
+			gridVals = new Cell[20][20];
 			String moves = "", obs = "";
 			Cell.Type o;
 			ArrayList<Point> points;
@@ -100,25 +88,25 @@ public class Controller implements Initializable {
 			int hCells = (int)(.2 * totalLeft);
 			int tCells = (int)(.2 * totalLeft);
 			
-			for(int i = 0; i < gV.length; i++){
-				for(int j = 0; j < gV[0].length; j++){
+			for(int i = 0; i < gridVals.length; i++){
+				for(int j = 0; j < gridVals[0].length; j++){
 					int x = (int)(Math.random() * totalLeft);
 					totalLeft--;
 					if(x < nCells){
 						nCells--;
-						gV[i][j] = new Cell(i,j);
+						gridVals[i][j] = new Cell(i,j);
 					}else if(x < nCells + hCells){
 						hCells--;
-						gV[i][j] = new Cell(i,j, Cell.Type.HIGHWAY);
+						gridVals[i][j] = new Cell(i,j, Cell.Type.HIGHWAY);
 					}else if(x < nCells + hCells + tCells){
 						tCells--;
-						gV[i][j] = new Cell(i,j, Cell.Type.HARD);
+						gridVals[i][j] = new Cell(i,j, Cell.Type.HARD);
 					}else{
-						gV[i][j] = new Cell(i,j, Cell.Type.BLOCKED);
+						gridVals[i][j] = new Cell(i,j, Cell.Type.BLOCKED);
 					}				
 				}
 			}
-			printGrid(X, gV);
+			printGrid(X, gridVals);
 			
 			for(int Y = 0; Y < 10; Y++){
 				Point start;
@@ -137,13 +125,13 @@ public class Controller implements Initializable {
 					default:	moves += 'R';	next = new Point(tmp.x, tmp.y+1);
 					}
 					
-					if(Math.random() >= .9 || !validPos(next.x, next.y))
+					if(Math.random() < .1 || !validPos(next.x, next.y))
 						next = tmp;
 					else
 						tmp = next;
 					points.add(next);
 					
-					o = gV[next.x][next.y].type;
+					o = gridVals[next.x][next.y].type;
 					double x = Math.random();
 					if(x < .05)
 						switch(o){
@@ -166,7 +154,7 @@ public class Controller implements Initializable {
 					}
 					
 				}
-				printData(X,Y,moves, obs, points);
+				printGTD(X,Y,moves, obs, points);
 			}
 		}
 		gtd.setVisible(true);
@@ -196,24 +184,19 @@ public class Controller implements Initializable {
 		}
 	}
 	
-	private void printData(int x, int y, String m, String o, ArrayList<Point> p){
+	private void printGTD(int x, int y, String m, String o, ArrayList<Point> p){
 		String name = x + "\\" + "GTD-" + y + ".txt";
 		FileWriter file;
 		
 		try {
 			file = new FileWriter(path + name, false);
-			for(int i = 0; i < 101; i++){
-				file.write(i + ": " + printP(p.remove(0)));
-				file.write(System.getProperty("line.separator"));
-			}
 			
-			for(int i = 0; i < 100; i++){
-				file.write((i + 1) + ": " + m.charAt(i));
-				file.write(System.getProperty("line.separator"));
-			}
+			file.write("0: " + printP(p.remove(0)));
+			file.write(System.getProperty("line.separator"));
 			
-			for(int i = 0; i < 100; i++){
-				file.write((i + 1) + ": " + o.charAt(i));
+			for(int i = 1; i < 101; i++){
+				file.write(i + ": " + printP(p.remove(0)) 
+				+ "\t" + m.charAt(i-1) +"\t" + o.charAt(i-1));
 				file.write(System.getProperty("line.separator"));
 			}
 
@@ -223,11 +206,27 @@ public class Controller implements Initializable {
 		}
 	}
 	
+	private void initializeSmallGrid(){
+		gridVals = new Cell[3][3];
+		
+		gridVals[0][0] = new Cell(0,0,Type.HIGHWAY);
+		gridVals[0][1] = new Cell(0,1,Type.HIGHWAY);
+		gridVals[0][2] = new Cell(0,2,Type.HARD);
+		gridVals[1][0] = new Cell(1,0);
+		gridVals[1][1] = new Cell(1,1);
+		gridVals[1][2] = new Cell(1,2);
+		gridVals[2][0] = new Cell(2,0);
+		gridVals[2][1] = new Cell(2,1,Type.BLOCKED);
+		gridVals[2][2] = new Cell(2,2,Type.HIGHWAY);
+		
+		count = 1;
+	}
+	
 	public void launchSmallGrid(){
+		initializeSmallGrid();
 		if(grid == null)
 			grid = new SimGUI(3, 3, this);
 		updateCells();
-		//setColors();
 	}
 	
 	public void addNext(){
@@ -302,7 +301,7 @@ public class Controller implements Initializable {
 	}
 	
 	private boolean validPos(int x, int y){
-		if(x >= 0 && y >= 0 && x < 3 && y < 3)
+		if(x >= 0 && y >= 0 && x < gridVals.length && y < gridVals[0].length)
 			return gridVals[x][y].type != Cell.Type.BLOCKED;
 		else
 			return false;
@@ -312,10 +311,11 @@ public class Controller implements Initializable {
 		if(grid == null)
 			return;
 		
-		for(int i = 0; i < 3; i++)
-			for(int j = 0; j < 3; j++){
+		for(int i = 0; i < gridVals.length; i++)
+			for(int j = 0; j < gridVals[0].length; j++){
+				double d = gridVals[i][j].data.get(0);
 				gridVals[i][j].data = new ArrayList<Double>();
-				gridVals[i][j].data.add(.125);
+				gridVals[i][j].data.add(d);
 			}
 		
 		moveObs = new ArrayList<MoveObs>();
@@ -329,8 +329,8 @@ public class Controller implements Initializable {
 		if(grid == null)
 			return;
 		
-		for(int i = 0; i < 3; i++)
-			for(int j = 0; j < 3; j++)
+		for(int i = 0; i < gridVals.length; i++)
+			for(int j = 0; j < gridVals[0].length; j++)
 				if(gridVals[i][j].type != Cell.Type.BLOCKED)
 					gridVals[i][j].data.remove(count-1);
 		
@@ -338,7 +338,7 @@ public class Controller implements Initializable {
 		moveObs.remove(count-1);
 		if(count == 1){
 			reset.setDisable(true);
-			undo.setDisable(true);			
+			undo.setDisable(true);	
 		}
 		updateCells();
 	}
@@ -349,8 +349,8 @@ public class Controller implements Initializable {
 		String s = "Most Likely Cell(s): ";
 		boolean multiple = false;
 		
-		for(int i = 0; i < 3; i++)
-			for(int j = 0; j < 3; j++){
+		for(int i = 0; i < gridVals.length; i++)
+			for(int j = 0; j < gridVals[0].length; j++){
 				if(gridVals[i][j].type == Cell.Type.BLOCKED)
 					continue;
 				if(gridVals[i][j].data.get(count-1) > val){
@@ -365,9 +365,9 @@ public class Controller implements Initializable {
 		while(best.size() > 0){
 			p = best.remove(0);
 			if(multiple)
-				s += ", (" + p.x + "," + p.y + ")";
+				s += "; " + printP(p);
 			else
-				s += "(" + p.x + "," + p.y + ")";
+				s += printP(p);
 			multiple = true;
 		}
 		
@@ -422,7 +422,7 @@ public class Controller implements Initializable {
 	}
 	
 	private String printP(Point p){
-		return "(" + p.x + "," + p.y + ")";
+		return "(" + (p.x+1) + "," + (p.y+1) + ")";
 	}
 	
 	private void updateCells(){
