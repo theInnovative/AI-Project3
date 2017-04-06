@@ -12,7 +12,7 @@
       <AnchorPane fx:id="anchorC" layoutX="22.0" layoutY="21.0">
          <children>
           <Button mnemonicParsing="false" onAction="#launchSmallGrid" text="3 X 3 Grid" />
-            <Button layoutX="77.0" mnemonicParsing="false" text="Load 20 X 20" />
+            <Button layoutX="77.0" mnemonicParsing="false" onAction="#browse" text="Load 20 X 20" />
          </children>
       </AnchorPane>
       <Separator layoutX="26.0" layoutY="296.0" prefHeight="2.0" prefWidth="255.0" />
