@@ -5,6 +5,8 @@ import java.awt.Point;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.net.URL;
+import java.text.DecimalFormat;
+import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.ResourceBundle;
 
@@ -380,18 +382,25 @@ public class Controller implements Initializable {
 	}
 	
 	private BestPath viterbi(Point p, int x){
+		Point parent;
+		double prob;
+		BestPath bp1, bp2;
+		String s, probStr;
+		NumberFormat formatter1 = new DecimalFormat("0.###E0");
+		NumberFormat formatter2 = new DecimalFormat(".####");
+	     
 		if(!validPos(p.x, p.y))
 			return new BestPath("", 0.0);
 		
 		if(x < 2){
-			double d = gridVals[p.x][p.y].data.get(0);
-			return new BestPath("[" + printP(p) + " = "+ Double.toString(d) +"]; ", d);
+			prob = gridVals[p.x][p.y].data.get(0);
+			if(prob < .0001)
+				s = formatter1.format(prob);
+			else
+				s = formatter2.format(prob);
+			return new BestPath("[" + printP(p) + " = "+ s +"]; ",
+					prob);
 		}
-		
-		Point parent;
-		double prob;
-		BestPath bp1, bp2;
-		String s;
 				
 		switch(moveObs.get(x-2).dir){
 		case UP:	parent = new Point(p.x + 1, p.y);	break;
@@ -417,8 +426,13 @@ public class Controller implements Initializable {
 		else
 			prob *= .05;
 		
+		if(prob < .0001)
+			probStr = formatter1.format(prob);
+		else
+			probStr = formatter2.format(prob);
+		
 		return new BestPath(s + "[" + printP(p) + " = "
-				+ Double.toString(prob) +"]; " ,prob);
+				+ probStr +"]; " ,prob);
 	}
 	
 	private String printP(Point p){

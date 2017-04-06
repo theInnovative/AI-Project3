@@ -1,7 +1,5 @@
 package view;
 
-import java.awt.Color;
-
 /**
  * Class representation of Cell node.
  *
@@ -10,12 +8,13 @@ import java.awt.Color;
  */
 
 import java.awt.Point;
+import java.text.DecimalFormat;
+import java.text.NumberFormat;
 import java.util.ArrayList;
 
 public class Cell {
 
 	Point self = null;
-	Color c = null;
 	ArrayList<Double> data;
 	Type type;
 	
@@ -45,6 +44,7 @@ public class Cell {
 	}
 	
 	public String toString(){
+		NumberFormat formatter = new DecimalFormat(".####");
 		String s = "";
 		
 		if(type == Type.BLOCKED)
@@ -57,10 +57,10 @@ public class Cell {
 		default: s+= "Hard   ";
 		}
 		
-		if(data.get(data.size()-1) >= .001)
-			s += "P() = " + Double.toString(data.get(data.size()-1));
+		if(data.get(data.size()-1) >= .0001)
+			s += "P() = " + formatter.format(data.get(data.size()-1));
 		else
-			s += "P() < .001";
+			s += "P() < .0001";
 			
 		return s;
 	}
