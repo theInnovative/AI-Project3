@@ -2,6 +2,11 @@ package view;
 
 import java.awt.Color;
 import java.awt.Point;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.net.URL;
@@ -10,11 +15,16 @@ import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.ResourceBundle;
 
+import javafx.application.Platform;
+import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.control.Button;
 import javafx.scene.control.RadioButton;
 import javafx.scene.control.ToggleGroup;
+import javafx.scene.layout.AnchorPane;
+import javafx.stage.FileChooser;
+import javafx.stage.Stage;
 import view.Cell.Type;
 
 public class Controller implements Initializable {
@@ -42,12 +52,29 @@ public class Controller implements Initializable {
 	@FXML
 	public Button undo;
 	@FXML
+	public Button addNext;
+	@FXML
 	public Button gtd;
+	@FXML
+	public Button tenMoves;
+	@FXML
+	public Button fifty;
+	@FXML
+	public Button allMoves;
+
+	@FXML
+	public AnchorPane anchorA;
+	@FXML
+	public AnchorPane anchorB;
+	@FXML
+	public AnchorPane anchorC;
 
 	private SimGUI grid;
 	private Cell gridVals[][];
 	private int count;
 	private ArrayList<MoveObs> moveObs = new ArrayList<MoveObs>();
+	private LoadedData lD;
+	private boolean success, largeGrid;
 	
 	private final static String path = "Trial Grids\\Grid-";
 	
@@ -70,6 +97,16 @@ public class Controller implements Initializable {
 			this.prob = prob;
 		}
 		
+	}
+	
+	public class LoadedData{
+		String moves, obs;
+		ArrayList<Point> points;
+		public LoadedData(String moves, String obs, ArrayList<Point> points){
+			this.moves = moves;
+			this.obs = obs;
+			this.points = points;
+		}
 	}
 
 	@Override
@@ -96,15 +133,15 @@ public class Controller implements Initializable {
 					totalLeft--;
 					if(x < nCells){
 						nCells--;
-						gridVals[i][j] = new Cell(i,j);
+						gridVals[i][j] = new Cell(i,j,0);
 					}else if(x < nCells + hCells){
 						hCells--;
-						gridVals[i][j] = new Cell(i,j, Cell.Type.HIGHWAY);
+						gridVals[i][j] = new Cell(i,j, Cell.Type.HIGHWAY,0);
 					}else if(x < nCells + hCells + tCells){
 						tCells--;
-						gridVals[i][j] = new Cell(i,j, Cell.Type.HARD);
+						gridVals[i][j] = new Cell(i,j, Cell.Type.HARD,0);
 					}else{
-						gridVals[i][j] = new Cell(i,j, Cell.Type.BLOCKED);
+						gridVals[i][j] = new Cell(i,j, Cell.Type.BLOCKED,0);
 					}				
 				}
 			}
@@ -210,29 +247,62 @@ public class Controller implements Initializable {
 	
 	private void initializeSmallGrid(){
 		gridVals = new Cell[3][3];
+		double d = .125;
 		
-		gridVals[0][0] = new Cell(0,0,Type.HIGHWAY);
-		gridVals[0][1] = new Cell(0,1,Type.HIGHWAY);
-		gridVals[0][2] = new Cell(0,2,Type.HARD);
-		gridVals[1][0] = new Cell(1,0);
-		gridVals[1][1] = new Cell(1,1);
-		gridVals[1][2] = new Cell(1,2);
-		gridVals[2][0] = new Cell(2,0);
-		gridVals[2][1] = new Cell(2,1,Type.BLOCKED);
-		gridVals[2][2] = new Cell(2,2,Type.HIGHWAY);
+		gridVals[0][0] = new Cell(0,0,Type.HIGHWAY,d);
+		gridVals[0][1] = new Cell(0,1,Type.HIGHWAY,d);
+		gridVals[0][2] = new Cell(0,2,Type.HARD,d);
+		gridVals[1][0] = new Cell(1,0,d);
+		gridVals[1][1] = new Cell(1,1,d);
+		gridVals[1][2] = new Cell(1,2,d);
+		gridVals[2][0] = new Cell(2,0,d);
+		gridVals[2][1] = new Cell(2,1,Type.BLOCKED,0);
+		gridVals[2][2] = new Cell(2,2,Type.HIGHWAY,d);
 		
 		count = 1;
 	}
 	
 	public void launchSmallGrid(){
+		anchorC.setDisable(true);
+		anchorA.setDisable(false);
 		initializeSmallGrid();
-		if(grid == null)
-			grid = new SimGUI(3, 3, this);
+		
+		grid = new SimGUI(3, 3);
+		grid.addWindowListener(new WindowAdapter(){
+			@Override
+			public void windowClosing(WindowEvent e) {
+				Platform.runLater(new Runnable() {
+				    @Override
+				    public void run() {
+				        guiTerminate();
+				    }
+				});
+		    }
+		});
+	
+		updateCells();
+		largeGrid = false;
+	}
+	
+	public void multipleMoves(ActionEvent e){
+		Button b = (Button)e.getSource();
+		int i;
+		
+		if(b == tenMoves)
+			i = 10;
+		else if(b == fifty)
+			i = 50;
+		else
+			i = 100;
+	
+		for(int j = 0; j < i; j++)
+			addNext(e);
+		
 		updateCells();
 	}
 	
-	public void addNext(){
-		double d[][] = new double[3][3];
+	public void addNext(ActionEvent e){
+		double d[][] = new double[gridVals.length][gridVals[0].length];
 		double total = 0;
 		Type typeEntered;
 		Direction directionEntered;
@@ -240,24 +310,42 @@ public class Controller implements Initializable {
 		if(grid == null)
 			return;
 		
-		if((RadioButton)type.getSelectedToggle() == normal)
-			typeEntered = Cell.Type.NORMAL;
-		else if((RadioButton)type.getSelectedToggle() == highway)
-			typeEntered = Cell.Type.HIGHWAY;
-		else
-			typeEntered = Cell.Type.HARD;
+		if(largeGrid){
+			switch(lD.moves.charAt(count-1)){
+			case 'U':	directionEntered = Direction.UP;	break;
+			case 'D':	directionEntered = Direction.DOWN;	break;
+			case 'L':	directionEntered = Direction.LEFT;	break;
+			default:	directionEntered = Direction.RIGHT;
+			}
+			
+			switch(lD.obs.charAt(count-1)){
+			case 'N':	typeEntered = Cell.Type.NORMAL;	break;
+			case 'T':	typeEntered = Cell.Type.HARD;	break;
+			default:	typeEntered = Cell.Type.HIGHWAY;
+			}
+			
+			//Display actual placement
+		}else{
+			if((RadioButton)type.getSelectedToggle() == normal)
+				typeEntered = Cell.Type.NORMAL;
+			else if((RadioButton)type.getSelectedToggle() == highway)
+				typeEntered = Cell.Type.HIGHWAY;
+			else
+				typeEntered = Cell.Type.HARD;
+			
+			if((RadioButton)direction.getSelectedToggle() == up)
+				directionEntered = Direction.UP;
+			else if((RadioButton)direction.getSelectedToggle() == down)
+				directionEntered = Direction.DOWN;
+			else if((RadioButton)direction.getSelectedToggle() == left)
+				directionEntered = Direction.LEFT;
+			else
+				directionEntered = Direction.RIGHT;
+		}
 		
-		if((RadioButton)direction.getSelectedToggle() == up)
-			directionEntered = Direction.UP;
-		else if((RadioButton)direction.getSelectedToggle() == down)
-			directionEntered = Direction.DOWN;
-		else if((RadioButton)direction.getSelectedToggle() == left)
-			directionEntered = Direction.LEFT;
-		else
-			directionEntered = Direction.RIGHT;
 		
-		for(int i = 0; i < 3; i++)
-			for(int j = 0; j < 3; j++){
+		for(int i = 0; i < gridVals.length; i++)
+			for(int j = 0; j < gridVals[0].length; j++){
 				if(gridVals[i][j].type == Cell.Type.BLOCKED)
 					continue;
 				int i2 = i, j2 = j;
@@ -276,8 +364,8 @@ public class Controller implements Initializable {
 					d[i][j] 	+= .9 * gridVals[i][j].data.get(count-1);
 			}
 		
-		for(int i = 0; i < 3; i++)
-			for(int j = 0; j < 3; j++){
+		for(int i = 0; i < gridVals.length; i++)
+			for(int j = 0; j < gridVals[0].length; j++){
 				if(gridVals[i][j].type == Cell.Type.BLOCKED)
 					continue;
 				if(typeEntered == gridVals[i][j].type)
@@ -287,8 +375,8 @@ public class Controller implements Initializable {
 				total += d[i][j];
 			}
 		
-		for(int i = 0; i < 3; i++)
-			for(int j = 0; j < 3; j++){
+		for(int i = 0; i < gridVals.length; i++)
+			for(int j = 0; j < gridVals[0].length; j++){
 				if(gridVals[i][j].type == Cell.Type.BLOCKED)
 					continue;
 				double probability = d[i][j]/total;//(int)(d[i][j]/total * 1000000)/1000000.0;
@@ -297,9 +385,37 @@ public class Controller implements Initializable {
 		
 		moveObs.add(new MoveObs(directionEntered, typeEntered));
 		count++;
+		disableButtons();
 		reset.setDisable(false);
 		undo.setDisable(false);
-		updateCells();
+		if(((Button)e.getSource()) == addNext)
+			updateCells();
+	}
+	
+	private void disableButtons(){
+		if(largeGrid){
+			if(count > 100){
+				addNext.setDisable(true);
+				allMoves.setDisable(true);
+				fifty.setDisable(true);
+				tenMoves.setDisable(true);
+			}else if(count > 90){
+				addNext.setDisable(false);
+				allMoves.setDisable(false);
+				fifty.setDisable(true);
+				tenMoves.setDisable(true);
+			}else if(count > 50){
+				addNext.setDisable(false);
+				allMoves.setDisable(false);
+				fifty.setDisable(true);
+				tenMoves.setDisable(false);
+			}else{
+				addNext.setDisable(false);
+				allMoves.setDisable(false);
+				fifty.setDisable(false);
+				tenMoves.setDisable(false);
+			}
+		}
 	}
 	
 	private boolean validPos(int x, int y){
@@ -440,8 +556,8 @@ public class Controller implements Initializable {
 	}
 	
 	private void updateCells(){
-		for(int i = 0; i < 3; i++)
-			for(int j = 0; j < 3; j++){
+		for(int i = 0; i < gridVals.length; i++)
+			for(int j = 0; j < gridVals[0].length; j++){
 				grid.setText(i, j, gridVals[i][j].toString());
 				if(gridVals[i][j].type == Cell.Type.BLOCKED){
 					grid.setCell(i,j, Color.BLACK);
@@ -450,6 +566,109 @@ public class Controller implements Initializable {
 							gridVals[i][j].data.get(count-1));
 			}
 		setBestPosition();
+	}
+	
+	public void browse(){
+		String gridFile;
+		FileChooser fileChooser = new FileChooser();
+		Stage stage = new Stage();
+		File file = fileChooser.showOpenDialog(stage);
+        if (file != null) {
+        	gridFile = file.getPath();
+        	file = fileChooser.showOpenDialog(stage);
+        	if (file != null){
+        		success = true;
+        		loadGrid(gridFile);
+        		loadGTD(file.getPath());
+        		
+        		if(success){
+	        		anchorC.setDisable(true);
+	        		anchorB.setDisable(false);
+	        		anchorA.setDisable(false);
+	        		largeGrid = true;
+	        		count = 1;
+        		}
+        	}
+        }
+	}
+	
+	private void loadGTD(String filepath){
+		String line, tokens[], moves = "", obs = "", delimiters = "[ (),]";
+		File file = new File(filepath);
+		ArrayList<Point> points = new ArrayList<Point>();
+
+		try {
+			BufferedReader reader = new BufferedReader(new FileReader(file));
+ 
+			line = 	reader.readLine();
+			tokens = line.split(delimiters);
+			points.add(new Point(Integer.parseInt(tokens[1]),
+					Integer.parseInt(tokens[2])));
+			
+			for(int i = 0; i < 100; i++){
+				line = 	reader.readLine();
+				tokens = line.split(delimiters);
+				points.add(new Point(Integer.parseInt(tokens[1]),
+						Integer.parseInt(tokens[2])));
+				
+				moves += tokens[3];
+				obs += tokens[4];
+			}
+			reader.close();
+			lD = new LoadedData(moves, obs, points);
+		} catch (IOException e){
+			success = false;
+			e.printStackTrace();
+		}
+	}
+	
+	private void loadGrid(String filepath){
+		File file = new File(filepath);
+		gridVals = new Cell[20][20];
+		double d = 1/360;
+		String line;
+
+		try{
+			BufferedReader reader = new BufferedReader(new FileReader(file));
+			
+			for(int i = 0; i < 20; i++){
+				line = reader.readLine();
+				for(int j = 0; j < 20; j++){
+					switch(line.charAt(j)){
+					case 'N':	gridVals[i][j] = new Cell(i,j, d);	break;
+					case 'T':	gridVals[i][j] = new Cell(i,j, Cell.Type.HARD, d);		break;
+					case 'H':	gridVals[i][j] = new Cell(i,j, Cell.Type.HIGHWAY, d);	break;
+					default:	gridVals[i][j] = new Cell(i,j, Cell.Type.BLOCKED, 0);
+					}
+				}
+			}
+			reader.close();
+			if(success){
+				grid = new SimGUI(20, 20);
+				grid.addWindowListener(new WindowAdapter(){
+					@Override
+					public void windowClosing(WindowEvent e) {
+						Platform.runLater(new Runnable() {
+						    @Override
+						    public void run() {
+						    	guiTerminate();
+						    }
+						});
+				    }
+				});
+				updateCells();
+			}
+		} catch (IOException e){
+			success = false;
+			e.printStackTrace();
+		}
+	}
+	
+	public void guiTerminate(){
+		reset();
+		anchorA.setDisable(true);
+		anchorB.setDisable(true);
+		anchorC.setDisable(false);
 	}
 	
 }

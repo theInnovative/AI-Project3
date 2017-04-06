@@ -3,6 +3,7 @@ package view;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.GridLayout;
+
 import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
@@ -25,9 +26,9 @@ public class SimGUI extends JFrame {
 	 * @param size the length of one dimension of a square tissue sample.
 	 * @param delay how long a cell waits before changing colors (in milliseconds)
 	 */
-	public SimGUI(int x, int y, Controller controller) {
+	public SimGUI(int x, int y) {
 		super("AI - Project 3 GUI");
-		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+		setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);		
 		setSize(500, 500);
 
 		gamePanel = new JPanel(new GridLayout(y, x));
@@ -78,11 +79,22 @@ public class SimGUI extends JFrame {
 	}
 	
 	public void setGradientColor(int row, int col, double value){
-		int x = 255 - (int)(value * 255);
-		String s = Integer.toHexString(x);
+		int x;
+		String s;
 		
-		buttons[row][col].setBackground(Color.decode("0x"+s+s+"ff"));
-		buttons[row][col].repaint();
+		if(value < .4){
+			x = (int)(value/ .4 * (255-50)) + 50;
+			s = Integer.toHexString(x);
+			
+			buttons[row][col].setBackground(Color.decode("0x"+"ff"+s+s));
+		}else{
+			x = 255 - (int)((value - .4)/ .6 * 255);
+			s = Integer.toHexString(x);
+			
+			buttons[row][col].setBackground(Color.decode("0x"+s+s+"ff"));
+		}
+		
+		buttons[row][col].repaint();		
 	}
 	
 	public void setLabel1(String s){

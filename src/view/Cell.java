@@ -20,19 +20,15 @@ public class Cell {
 	
 	public enum Type { NORMAL, HIGHWAY, HARD, BLOCKED }
 
-	public Cell(int x, int y, Type type){
+	public Cell(int x, int y, Type type, double d){
 		self = new Point(x,y);
 		this.type = type;
 		data = new ArrayList<Double>();
-		data.add(.125);
+		data.add(d);
 	}
 	
-	public Cell(int x, int y){
-		this(x,y,Type.NORMAL);
-	}
-
-	public Cell copy(){
-		return new Cell(self.x,self.y,type);
+	public Cell(int x, int y, double d){
+		this(x,y,Type.NORMAL, d);
 	}
 
 	@Override

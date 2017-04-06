@@ -12,7 +12,7 @@ public class AIProject3 extends Application{
 	public void start(Stage primaryStage) {
 		try {
 			Parent root = FXMLLoader.load(getClass().getResource("/view/ai3.fxml"));
-			Scene scene = new Scene(root,300,300);
+			Scene scene = new Scene(root,300,350);
 			scene.getStylesheets().add(getClass().getResource("application.css").toExternalForm());
 			primaryStage.setScene(scene);
 			primaryStage.setTitle("AI - Project 3 Simulator");

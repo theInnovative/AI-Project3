@@ -7,30 +7,47 @@
 <?import javafx.scene.control.ToggleGroup?>
 <?import javafx.scene.layout.AnchorPane?>
 
-<AnchorPane prefHeight="300.0" prefWidth="300.0" xmlns="http://javafx.com/javafx/8.0.65" xmlns:fx="http://javafx.com/fxml/1" fx:controller="view.Controller">
+<AnchorPane prefHeight="350.0" prefWidth="300.0" xmlns="http://javafx.com/javafx/8.0.65" xmlns:fx="http://javafx.com/fxml/1" fx:controller="view.Controller">
    <children>
-    <Button layoutX="22.0" layoutY="21.0" mnemonicParsing="false" onAction="#launchSmallGrid" text="3 X 3 Grid" />
-      <Separator layoutX="21.0" layoutY="62.0" prefHeight="2.0" prefWidth="255.0" />
+      <AnchorPane fx:id="anchorC" layoutX="22.0" layoutY="21.0">
+         <children>
+          <Button mnemonicParsing="false" onAction="#launchSmallGrid" text="3 X 3 Grid" />
+            <Button layoutX="77.0" mnemonicParsing="false" text="Load 20 X 20" />
+         </children>
+      </AnchorPane>
+      <Separator layoutX="26.0" layoutY="296.0" prefHeight="2.0" prefWidth="255.0" />
       <Separator layoutX="147.0" layoutY="71.0" orientation="VERTICAL" prefHeight="166.0" prefWidth="6.0" />
       <Label layoutX="49.0" layoutY="73.0" text="DIRECTION" />
       <Label layoutX="193.0" layoutY="73.0" text="CELL TYPE" />
-      <RadioButton fx:id="up" layoutX="40.0" layoutY="105.0" mnemonicParsing="false" selected="true" text="UP">
-         <toggleGroup>
-            <ToggleGroup fx:id="direction" />
-         </toggleGroup></RadioButton>
-      <RadioButton fx:id="right" layoutX="40.0" layoutY="222.0" mnemonicParsing="false" text="RIGHT" toggleGroup="$direction" />
-      <RadioButton fx:id="down" layoutX="40.0" layoutY="145.0" mnemonicParsing="false" text="DOWN" toggleGroup="$direction" />
-      <RadioButton fx:id="left" layoutX="40.0" layoutY="184.0" mnemonicParsing="false" text="LEFT" toggleGroup="$direction" />
-      <RadioButton fx:id="hard" layoutX="184.0" layoutY="184.0" mnemonicParsing="false" text="HARD">
-         <toggleGroup>
-            <ToggleGroup fx:id="type" />
-         </toggleGroup></RadioButton>
-      <RadioButton fx:id="highway" layoutX="184.0" layoutY="145.0" mnemonicParsing="false" text="HIGHWAY" toggleGroup="$type" />
-      <RadioButton fx:id="normal" layoutX="184.0" layoutY="105.0" mnemonicParsing="false" selected="true" text="NORMAL" toggleGroup="$type" />
-    <Button defaultButton="true" layoutX="202.0" layoutY="260.0" minWidth="75.0" mnemonicParsing="false" onAction="#addNext" text="ADD NEXT" />
-      <Button fx:id="undo" disable="true" layoutX="117.0" layoutY="260.0" minWidth="75.0" mnemonicParsing="false" onAction="#undo" text="UNDO" />
-      <Button fx:id="reset" disable="true" layoutX="30.0" layoutY="260.0" minWidth="75.0" mnemonicParsing="false" onAction="#reset" text="RESET" />
+      <AnchorPane fx:id="anchorA" disable="true" layoutX="30.0" layoutY="105.0">
+         <children>
+            <RadioButton fx:id="up" layoutX="10.0" mnemonicParsing="false" selected="true" text="UP">
+               <toggleGroup>
+                  <ToggleGroup fx:id="direction" />
+               </toggleGroup>
+            </RadioButton>
+            <RadioButton fx:id="right" layoutX="10.0" layoutY="117.0" mnemonicParsing="false" text="RIGHT" toggleGroup="$direction" />
+            <RadioButton fx:id="down" layoutX="10.0" layoutY="40.0" mnemonicParsing="false" text="DOWN" toggleGroup="$direction" />
+            <RadioButton fx:id="left" layoutX="10.0" layoutY="79.0" mnemonicParsing="false" text="LEFT" toggleGroup="$direction" />
+            <RadioButton fx:id="hard" layoutX="154.0" layoutY="79.0" mnemonicParsing="false" text="HARD">
+               <toggleGroup>
+                  <ToggleGroup fx:id="type" />
+               </toggleGroup>
+            </RadioButton>
+            <RadioButton fx:id="highway" layoutX="154.0" layoutY="40.0" mnemonicParsing="false" text="HIGHWAY" toggleGroup="$type" />
+            <RadioButton fx:id="normal" layoutX="154.0" mnemonicParsing="false" selected="true" text="NORMAL" toggleGroup="$type" />
+          <Button fx:id="addNext" defaultButton="true" layoutX="172.0" layoutY="155.0" minWidth="75.0" mnemonicParsing="false" onAction="#addNext" text="ADD NEXT" />
+            <Button fx:id="undo" disable="true" layoutX="87.0" layoutY="155.0" minWidth="75.0" mnemonicParsing="false" onAction="#undo" text="UNDO" />
+            <Button fx:id="reset" disable="true" layoutY="155.0" minWidth="75.0" mnemonicParsing="false" onAction="#reset" text="RESET" />
+         </children>
+      </AnchorPane>
       <Button fx:id="gtd" layoutX="194.0" layoutY="21.0" mnemonicParsing="false" onAction="#generateTruthData" text="Develop GTD" />
-      <Button layoutX="141.0" layoutY="21.0" mnemonicParsing="false" />
+      <AnchorPane fx:id="anchorB" disable="true" layoutX="31.0" layoutY="308.0">
+         <children>
+            <Button fx:id="tenMoves" mnemonicParsing="false" onAction="#multipleMoves" text="10 MOVES" />
+            <Button fx:id="allMoves" layoutX="167.0" mnemonicParsing="false" onAction="#multipleMoves" text="ALL MOVES" />
+            <Button fx:id="fifty" layoutX="86.0" mnemonicParsing="false" onAction="#multipleMoves" text="50 MOVES" />
+         </children>
+      </AnchorPane>
    </children>
 </AnchorPane>
