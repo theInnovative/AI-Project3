@@ -24,6 +24,7 @@ import javafx.scene.control.RadioButton;
 import javafx.scene.control.ToggleGroup;
 import javafx.scene.layout.AnchorPane;
 import javafx.stage.FileChooser;
+import javafx.stage.FileChooser.ExtensionFilter;
 import javafx.stage.Stage;
 import view.Cell.Type;
 
@@ -394,17 +395,17 @@ public class Controller implements Initializable {
 	
 	private void disableButtons(){
 		if(largeGrid){
-			if(count > 100){
+			if(count > 101){
 				addNext.setDisable(true);
 				allMoves.setDisable(true);
 				fifty.setDisable(true);
 				tenMoves.setDisable(true);
-			}else if(count > 90){
+			}else if(count > 91){
 				addNext.setDisable(false);
 				allMoves.setDisable(false);
 				fifty.setDisable(true);
 				tenMoves.setDisable(true);
-			}else if(count > 50){
+			}else if(count > 51){
 				addNext.setDisable(false);
 				allMoves.setDisable(false);
 				fifty.setDisable(true);
@@ -438,6 +439,7 @@ public class Controller implements Initializable {
 		
 		moveObs = new ArrayList<MoveObs>();
 		count = 1;
+		disableButtons();
 		reset.setDisable(true);
 		undo.setDisable(true);
 		updateCells();
@@ -453,6 +455,7 @@ public class Controller implements Initializable {
 					gridVals[i][j].data.remove(count-1);
 		
 		count--;
+		disableButtons();
 		moveObs.remove(count-1);
 		if(count == 1){
 			reset.setDisable(true);
@@ -489,8 +492,15 @@ public class Controller implements Initializable {
 			multiple = true;
 		}
 		
-		grid.setLabel1("Probability: " + val + "   " + s);
-		setBestPath(p);
+		String line = "Moves: " + (count-1) + "\tProbability: " 
+				+ val + "   " + s;
+		if(largeGrid){
+			line += "\tActual Pos: " + printP(lD.points.get(count-1));
+		}
+		
+		grid.setLabel1(line);
+		if(count <= 20)
+			setBestPath(p);
 	}
 	
 	private void setBestPath(Point p){
@@ -571,13 +581,20 @@ public class Controller implements Initializable {
 	public void browse(){
 		String gridFile;
 		FileChooser fileChooser = new FileChooser();
+		fileChooser.setInitialDirectory(new File("Trial Grids"));
+		fileChooser.setTitle("Open Grid File");
+		fileChooser.getExtensionFilters().addAll(
+		         new ExtensionFilter("Text Files", "*.txt"));
 		Stage stage = new Stage();
 		File file = fileChooser.showOpenDialog(stage);
         if (file != null) {
         	gridFile = file.getPath();
+        	fileChooser.setTitle("Open Ground Truth Data File");
+    		fileChooser.setInitialDirectory(new File(gridFile).getParentFile());
         	file = fileChooser.showOpenDialog(stage);
         	if (file != null){
         		success = true;
+	        	count = 1;
         		loadGrid(gridFile);
         		loadGTD(file.getPath());
         		
@@ -586,14 +603,13 @@ public class Controller implements Initializable {
 	        		anchorB.setDisable(false);
 	        		anchorA.setDisable(false);
 	        		largeGrid = true;
-	        		count = 1;
         		}
         	}
         }
 	}
 	
 	private void loadGTD(String filepath){
-		String line, tokens[], moves = "", obs = "", delimiters = "[ (),]";
+		String line, tokens[], moves = "", obs = "", delimiters = "[(),\t]";
 		File file = new File(filepath);
 		ArrayList<Point> points = new ArrayList<Point>();
 
@@ -608,11 +624,11 @@ public class Controller implements Initializable {
 			for(int i = 0; i < 100; i++){
 				line = 	reader.readLine();
 				tokens = line.split(delimiters);
-				points.add(new Point(Integer.parseInt(tokens[1]),
-						Integer.parseInt(tokens[2])));
+				points.add(new Point(Integer.parseInt(tokens[1])-1,
+						Integer.parseInt(tokens[2])-1));
 				
-				moves += tokens[3];
-				obs += tokens[4];
+				moves += tokens[4];
+				obs += tokens[5];
 			}
 			reader.close();
 			lD = new LoadedData(moves, obs, points);
@@ -625,7 +641,7 @@ public class Controller implements Initializable {
 	private void loadGrid(String filepath){
 		File file = new File(filepath);
 		gridVals = new Cell[20][20];
-		double d = 1/360;
+		double d = 1.0/360.0;
 		String line;
 
 		try{

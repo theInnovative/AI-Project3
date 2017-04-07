@@ -2,7 +2,9 @@ package view;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
+import java.awt.Font;
 import java.awt.GridLayout;
+import java.awt.Insets;
 
 import javax.swing.JButton;
 import javax.swing.JFrame;
@@ -29,7 +31,7 @@ public class SimGUI extends JFrame {
 	public SimGUI(int x, int y) {
 		super("AI - Project 3 GUI");
 		setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);		
-		setSize(500, 500);
+		setSize(1200, 700);
 
 		gamePanel = new JPanel(new GridLayout(y, x));
 		panel = new JPanel(new BorderLayout());
@@ -41,6 +43,8 @@ public class SimGUI extends JFrame {
 		for (int row = 0; row < y; row++){
 			 for (int col = 0; col < x; col++) {
 				JButton b = new JButton("");
+				b.setFont(new Font("Arial", Font.PLAIN, 10));
+				b.setMargin(new Insets(1,1,1,1));
 				b.setBackground(Color.WHITE);
 				buttons[row][col] = b;
 				gamePanel.add(b);

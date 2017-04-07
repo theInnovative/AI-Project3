@@ -40,23 +40,23 @@ public class Cell {
 	}
 	
 	public String toString(){
-		NumberFormat formatter = new DecimalFormat(".####");
+		NumberFormat formatter = new DecimalFormat(".###");
 		String s = "";
 		
 		if(type == Type.BLOCKED)
 			return "";
 			
 		switch(type){
-		case BLOCKED:	s += "Blocked   ";	break;
-		case NORMAL:	s += "Normal   ";	break;
-		case HIGHWAY:	s += "Highway   ";	break;
-		default: s+= "Hard   ";
+		case BLOCKED:	s += "B   ";	break;
+		case NORMAL:	s += "N   ";	break;
+		case HIGHWAY:	s += "H   ";	break;
+		default: s+= "T   ";
 		}
 		
-		if(data.get(data.size()-1) >= .0001)
-			s += "P() = " + formatter.format(data.get(data.size()-1));
+		if(data.get(data.size()-1) >= .001)
+			s += ", " + formatter.format(data.get(data.size()-1));
 		else
-			s += "P() < .0001";
+			s += ", <.001";
 			
 		return s;
 	}
