@@ -74,8 +74,10 @@ public class Controller implements Initializable {
 	private Cell gridVals[][];
 	private int count;
 	private ArrayList<MoveObs> moveObs = new ArrayList<MoveObs>();
+	private ArrayList<Point> bestPoints;
 	private LoadedData lD;
 	private boolean success, largeGrid;
+	private double error[];
 	
 	private final static String path = "Trial Grids\\Grid-";
 	
@@ -282,6 +284,7 @@ public class Controller implements Initializable {
 		});
 	
 		updateCells();
+		setBestPosition();
 		largeGrid = false;
 	}
 	
@@ -300,6 +303,7 @@ public class Controller implements Initializable {
 			addNext(e);
 		
 		updateCells();
+		setBestPosition();
 	}
 	
 	public void addNext(ActionEvent e){
@@ -391,6 +395,7 @@ public class Controller implements Initializable {
 		undo.setDisable(false);
 		if(((Button)e.getSource()) == addNext)
 			updateCells();
+		setBestPosition();
 	}
 	
 	private void disableButtons(){
@@ -443,6 +448,7 @@ public class Controller implements Initializable {
 		reset.setDisable(true);
 		undo.setDisable(true);
 		updateCells();
+		setBestPosition();
 	}
 	
 	public void undo(){
@@ -462,6 +468,7 @@ public class Controller implements Initializable {
 			undo.setDisable(true);	
 		}
 		updateCells();
+		setBestPosition();
 	}
 	
 	private void setBestPosition(){
@@ -476,10 +483,10 @@ public class Controller implements Initializable {
 					continue;
 				if(gridVals[i][j].data.get(count-1) > val){
 					best = new ArrayList<Point>();
-					best.add(new Point(i,j));
+					best.add(gridVals[i][j].self);
 					val = gridVals[i][j].data.get(count-1);
 				}else if(gridVals[i][j].data.get(count-1) == val)
-					best.add(new Point(i,j));
+					best.add(gridVals[i][j].self);
 			}
 		
 		Point p = null;
@@ -492,15 +499,30 @@ public class Controller implements Initializable {
 			multiple = true;
 		}
 		
-		String line = "Moves: " + (count-1) + "\tProbability: " 
-				+ val + "   " + s;
+		String line = "Moves: " + (count-1);
+		if(count > 1){
+			if(largeGrid)
+				line += " (" + lD.moves.charAt(count-2) + "," + lD.obs.charAt(count-2) + ")";
+			else
+				line += " (" + moveObs.get(count-2).dir + "," + moveObs.get(count-2).obs + ")";
+		}
+		
+		line += "\tProbability: " + val + "   " + s;
+		
 		if(largeGrid){
 			line += "\tActual Pos: " + printP(lD.points.get(count-1));
+			line += "\t" + Double.toString(getError(p));
 		}
 		
 		grid.setLabel1(line);
-		if(count <= 20)
+		if(count <= 15)
 			setBestPath(p);
+	}
+	
+	private double getError(Point p){
+		Point actual = lD.points.get(count-1);
+		error[count-2] = Point.distance(p.x, p.y, actual.x, actual.y);
+		return error[count-2];
 	}
 	
 	private void setBestPath(Point p){
@@ -513,7 +535,7 @@ public class Controller implements Initializable {
 		BestPath bp1, bp2;
 		String s, probStr;
 		NumberFormat formatter1 = new DecimalFormat("0.###E0");
-		NumberFormat formatter2 = new DecimalFormat(".####");
+		NumberFormat formatter2 = new DecimalFormat(".###");
 	     
 		if(!validPos(p.x, p.y))
 			return new BestPath("", 0.0);
@@ -575,7 +597,6 @@ public class Controller implements Initializable {
 					grid.setGradientColor(i,j, 
 							gridVals[i][j].data.get(count-1));
 			}
-		setBestPosition();
 	}
 	
 	public void browse(){
@@ -603,6 +624,8 @@ public class Controller implements Initializable {
 	        		anchorB.setDisable(false);
 	        		anchorA.setDisable(false);
 	        		largeGrid = true;
+	        		error = new double[100];
+	        		bestPoints = new ArrayList<Point>();
         		}
         	}
         }
@@ -618,8 +641,8 @@ public class Controller implements Initializable {
  
 			line = 	reader.readLine();
 			tokens = line.split(delimiters);
-			points.add(new Point(Integer.parseInt(tokens[1]),
-					Integer.parseInt(tokens[2])));
+			points.add(new Point(Integer.parseInt(tokens[1])-1,
+					Integer.parseInt(tokens[2])-1));
 			
 			for(int i = 0; i < 100; i++){
 				line = 	reader.readLine();
@@ -640,9 +663,9 @@ public class Controller implements Initializable {
 	
 	private void loadGrid(String filepath){
 		File file = new File(filepath);
-		gridVals = new Cell[20][20];
 		double d = 1.0/360.0;
 		String line;
+		gridVals = new Cell[20][20];
 
 		try{
 			BufferedReader reader = new BufferedReader(new FileReader(file));
@@ -660,19 +683,22 @@ public class Controller implements Initializable {
 			}
 			reader.close();
 			if(success){
-				grid = new SimGUI(20, 20);
-				grid.addWindowListener(new WindowAdapter(){
-					@Override
-					public void windowClosing(WindowEvent e) {
-						Platform.runLater(new Runnable() {
-						    @Override
-						    public void run() {
-						    	guiTerminate();
-						    }
-						});
-				    }
-				});
+				if(grid == null || grid.buttons.length != 20){
+					grid = new SimGUI(20, 20);
+					grid.addWindowListener(new WindowAdapter(){
+						@Override
+						public void windowClosing(WindowEvent e) {
+							Platform.runLater(new Runnable() {
+							    @Override
+							    public void run() {
+							    	guiTerminate();
+							    }
+							});
+					    }
+					});
+				}
 				updateCells();
+				setBestPosition();
 			}
 		} catch (IOException e){
 			success = false;
@@ -680,7 +706,76 @@ public class Controller implements Initializable {
 		}
 	}
 	
-	public void guiTerminate(){
+	public void computeTotalError(){
+		String pathname;
+		Cell copy[][];
+		double err[][] = new double[100][];
+		count = 1;
+		
+		for(int i = 0; i < 10; i++){
+			success = true;
+			pathname = path + i + "\\";
+			loadGrid(pathname + "Grid.txt");
+			copy = gridVals.clone();
+			for(int j = 0; j < 10; j++){
+				gridVals = copy.clone();
+				loadGTD(pathname + "GTD-" + j + ".txt");
+				largeGrid = true;
+				error = new double[100];
+				multipleMoves(new ActionEvent(allMoves,null));
+				err[(i*10)+j] = error;
+				count = 1;
+			}
+			printError(i, err);
+			largeGrid = false;
+		}
+		
+		printAllError(err);
+	}
+
+	private void printAllError(double err[][]){
+		String pathname ="Trial Grids\\All-Error.txt";
+		FileWriter file;
+		NumberFormat formatter = new DecimalFormat("###.###");
+		
+		try {
+			file = new FileWriter(pathname, false);
+			for(int i = 0; i < 100; i++){
+				file.write((i+1) + ":\t");
+				for(int j = 0; j < 100; j++){
+					file.write(formatter.format(err[j][i]) + "\t");
+				}
+				file.write(System.getProperty("line.separator"));
+			}
+			
+			file.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+	
+	private void printError(int x, double err[][]){
+		String name = x + "\\Error.txt";
+		FileWriter file;
+		NumberFormat formatter = new DecimalFormat("###.###");
+		
+		try {
+			file = new FileWriter(path + name, false);
+			for(int i = 0; i < 100; i++){
+				file.write((i+1) + ":\t");
+				for(int j = 0; j < 10; j++){
+					file.write(formatter.format(err[(x*10)+j][i]) + "\t");
+				}
+				file.write(System.getProperty("line.separator"));
+			}
+
+			file.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+	
+	private void guiTerminate(){
 		reset();
 		anchorA.setDisable(true);
 		anchorB.setDisable(true);
