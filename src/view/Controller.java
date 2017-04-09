@@ -74,10 +74,10 @@ public class Controller implements Initializable {
 	private Cell gridVals[][];
 	private int count;
 	private ArrayList<MoveObs> moveObs = new ArrayList<MoveObs>();
-	private ArrayList<Point> bestPoints;
+	//private ArrayList<Point> bestPoints;
 	private LoadedData lD;
 	private boolean success, largeGrid;
-	private double error[];
+	private double error[], actProb[];
 	
 	private final static String path = "Trial Grids\\Grid-";
 	
@@ -167,10 +167,10 @@ public class Controller implements Initializable {
 					default:	moves += 'R';	next = new Point(tmp.x, tmp.y+1);
 					}
 					
-					if(Math.random() < .1 || !validPos(next.x, next.y))
-						next = tmp;
-					else
+					if(Math.random() < .9 && validPos(next.x, next.y))
 						tmp = next;
+					else
+						next = tmp;
 					points.add(next);
 					
 					o = gridVals[next.x][next.y].type;
@@ -511,7 +511,7 @@ public class Controller implements Initializable {
 		
 		if(largeGrid){
 			line += "\tActual Pos: " + printP(lD.points.get(count-1));
-			line += "\t" + Double.toString(getError(p));
+			line += "\tError: " + Double.toString(getError(p));
 		}
 		
 		grid.setLabel1(line);
@@ -522,6 +522,7 @@ public class Controller implements Initializable {
 	private double getError(Point p){
 		Point actual = lD.points.get(count-1);
 		error[count-2] = Point.distance(p.x, p.y, actual.x, actual.y);
+		actProb[count-2] = gridVals[actual.x][actual.y].data.get(count-1);
 		return error[count-2];
 	}
 	
@@ -625,7 +626,7 @@ public class Controller implements Initializable {
 	        		anchorA.setDisable(false);
 	        		largeGrid = true;
 	        		error = new double[100];
-	        		bestPoints = new ArrayList<Point>();
+	        		//bestPoints = new ArrayList<Point>();
         		}
         	}
         }
@@ -710,6 +711,7 @@ public class Controller implements Initializable {
 		String pathname;
 		Cell copy[][];
 		double err[][] = new double[100][];
+		double act[][] = new double[100][];
 		count = 1;
 		
 		for(int i = 0; i < 10; i++){
@@ -722,54 +724,68 @@ public class Controller implements Initializable {
 				loadGTD(pathname + "GTD-" + j + ".txt");
 				largeGrid = true;
 				error = new double[100];
+				actProb = new double[100];
 				multipleMoves(new ActionEvent(allMoves,null));
 				err[(i*10)+j] = error;
+				act[(i*10)+j] = actProb;
 				count = 1;
 			}
-			printError(i, err);
+			printErrorAndProbs(i, err, act);
 			largeGrid = false;
 		}
 		
-		printAllError(err);
+		printAllErrorAndProbs(err, act);
 	}
 
-	private void printAllError(double err[][]){
-		String pathname ="Trial Grids\\All-Error.txt";
-		FileWriter file;
+	private void printAllErrorAndProbs(double err[][], double act[][]){
+		String pathname1 ="Trial Grids\\All-Error.txt";
+		String pathname2 ="Trial Grids\\All-Probabilities.txt";
+		FileWriter file1, file2;
 		NumberFormat formatter = new DecimalFormat("###.###");
+		NumberFormat formatter1 = new DecimalFormat("###.##########");
 		
 		try {
-			file = new FileWriter(pathname, false);
+			file1 = new FileWriter(pathname1, false);
+			file2 = new FileWriter(pathname2, false);
 			for(int i = 0; i < 100; i++){
-				file.write((i+1) + ":\t");
+				file1.write((i+1) + ":\t");
+				file2.write((i+1) + ":\t");
 				for(int j = 0; j < 100; j++){
-					file.write(formatter.format(err[j][i]) + "\t");
+					file1.write(formatter.format(err[j][i]) + "\t");
+					file2.write(formatter1.format(act[j][i]) + "\t");
 				}
-				file.write(System.getProperty("line.separator"));
+				file1.write(System.getProperty("line.separator"));
+				file2.write(System.getProperty("line.separator"));
 			}
 			
-			file.close();
+			file1.close();
+			file2.close();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
 	}
 	
-	private void printError(int x, double err[][]){
-		String name = x + "\\Error.txt";
-		FileWriter file;
+	private void printErrorAndProbs(int x, double err[][], double act[][]){
+		String name1 = x + "\\Error.txt", name2 = x + "\\Actual-Probabilities.txt";
+		FileWriter file1, file2;
 		NumberFormat formatter = new DecimalFormat("###.###");
 		
 		try {
-			file = new FileWriter(path + name, false);
+			file1 = new FileWriter(path + name1, false);
+			file2 = new FileWriter(path + name2, false);
 			for(int i = 0; i < 100; i++){
-				file.write((i+1) + ":\t");
+				file1.write((i+1) + ":\t");
+				file2.write((i+1) + ":\t");
 				for(int j = 0; j < 10; j++){
-					file.write(formatter.format(err[(x*10)+j][i]) + "\t");
+					file1.write(formatter.format(err[(x*10)+j][i]) + "\t");
+					file2.write(formatter.format(act[(x*10)+j][i]) + "\t");
 				}
-				file.write(System.getProperty("line.separator"));
+				file1.write(System.getProperty("line.separator"));
+				file2.write(System.getProperty("line.separator"));
 			}
 
-			file.close();
+			file1.close();
+			file2.close();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
