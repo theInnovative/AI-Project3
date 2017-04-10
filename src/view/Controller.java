@@ -13,7 +13,9 @@ import java.net.URL;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.util.ArrayList;
+import java.util.PriorityQueue;
 import java.util.ResourceBundle;
+import java.util.Timer;
 
 import javafx.application.Platform;
 import javafx.event.ActionEvent;
@@ -28,7 +30,7 @@ import javafx.stage.FileChooser.ExtensionFilter;
 import javafx.stage.Stage;
 import view.Cell.Type;
 
-public class Controller implements Initializable {
+public class Controller implements Initializable, Runnable {
 	
 	@FXML
 	public RadioButton up;
@@ -62,6 +64,14 @@ public class Controller implements Initializable {
 	public Button fifty;
 	@FXML
 	public Button allMoves;
+	@FXML
+	public Button viterbi;
+	@FXML
+	public Button viterbiMax;
+	@FXML
+	public Button viterbi20;
+	@FXML
+	public Button viterbiTen;
 
 	@FXML
 	public AnchorPane anchorA;
@@ -69,15 +79,18 @@ public class Controller implements Initializable {
 	public AnchorPane anchorB;
 	@FXML
 	public AnchorPane anchorC;
+	@FXML
+	public AnchorPane anchorD;
 
 	private SimGUI grid;
 	private Cell gridVals[][];
-	private int count;
+	private int count, viterbiCount;
 	private ArrayList<MoveObs> moveObs = new ArrayList<MoveObs>();
-	//private ArrayList<Point> bestPoints;
+	private ArrayList<Point> bestPoints;
 	private LoadedData lD;
-	private boolean success, largeGrid;
+	private boolean success, largeGrid, viterbiMode = false;
 	private double error[], actProb[];
+	public Point selectedCell;
 	
 	private final static String path = "Trial Grids\\Grid-";
 	
@@ -95,9 +108,12 @@ public class Controller implements Initializable {
 	public class BestPath{
 		String s;
 		double prob;
-		public BestPath(String s, double prob){
+		ArrayList<Point> list = new ArrayList<Point>();
+		
+		public BestPath(String s, double prob, ArrayList<Point> list){
 			this.s = s;
 			this.prob = prob;
+			this.list = list;
 		}
 		
 	}
@@ -270,7 +286,7 @@ public class Controller implements Initializable {
 		anchorA.setDisable(false);
 		initializeSmallGrid();
 		
-		grid = new SimGUI(3, 3);
+		grid = new SimGUI(3, 3, this);
 		grid.addWindowListener(new WindowAdapter(){
 			@Override
 			public void windowClosing(WindowEvent e) {
@@ -297,7 +313,7 @@ public class Controller implements Initializable {
 		else if(b == fifty)
 			i = 50;
 		else
-			i = 100;
+			i = 100 - (count-1);
 	
 		for(int j = 0; j < i; j++)
 			addNext(e);
@@ -400,7 +416,7 @@ public class Controller implements Initializable {
 	
 	private void disableButtons(){
 		if(largeGrid){
-			if(count > 101){
+			if(count >= 101){
 				addNext.setDisable(true);
 				allMoves.setDisable(true);
 				fifty.setDisable(true);
@@ -476,6 +492,8 @@ public class Controller implements Initializable {
 		ArrayList<Point> best = new ArrayList<Point>();
 		String s = "Most Likely Cell(s): ";
 		boolean multiple = false;
+		ArrayList<Cell> orderedPoints = new ArrayList<Cell>();
+		bestPoints = new ArrayList<Point>();
 		
 		for(int i = 0; i < gridVals.length; i++)
 			for(int j = 0; j < gridVals[0].length; j++){
@@ -487,7 +505,14 @@ public class Controller implements Initializable {
 					val = gridVals[i][j].data.get(count-1);
 				}else if(gridVals[i][j].data.get(count-1) == val)
 					best.add(gridVals[i][j].self);
+				orderedPoints.add(gridVals[i][j]);
 			}
+		
+		orderedPoints.sort((a,b) -> {
+			double d = b.data.get(count-1) - a.data.get(count-1);
+			if(d == 0)	return 0;
+			if(d < 0)	return -1;
+			return 1;	});
 		
 		Point p = null;
 		while(best.size() > 0){
@@ -501,9 +526,12 @@ public class Controller implements Initializable {
 		
 		String line = "Moves: " + (count-1);
 		if(count > 1){
-			if(largeGrid)
+			if(largeGrid){
 				line += " (" + lD.moves.charAt(count-2) + "," + lD.obs.charAt(count-2) + ")";
-			else
+				for(int i = 0; i < 10; i++){
+					bestPoints.add(orderedPoints.remove(0).self);
+				}
+			}else
 				line += " (" + moveObs.get(count-2).dir + "," + moveObs.get(count-2).obs + ")";
 		}
 		
@@ -511,7 +539,8 @@ public class Controller implements Initializable {
 		
 		if(largeGrid){
 			line += "\tActual Pos: " + printP(lD.points.get(count-1));
-			line += "\tError: " + Double.toString(getError(p));
+			if(count > 1)
+				line += "\tError: " + Double.toString(getError(p));
 		}
 		
 		grid.setLabel1(line);
@@ -537,9 +566,10 @@ public class Controller implements Initializable {
 		String s, probStr;
 		NumberFormat formatter1 = new DecimalFormat("0.###E0");
 		NumberFormat formatter2 = new DecimalFormat(".###");
+		ArrayList<Point> arr;
 	     
 		if(!validPos(p.x, p.y))
-			return new BestPath("", 0.0);
+			return new BestPath("", 0.0, null);
 		
 		if(x < 2){
 			prob = gridVals[p.x][p.y].data.get(0);
@@ -547,8 +577,10 @@ public class Controller implements Initializable {
 				s = formatter1.format(prob);
 			else
 				s = formatter2.format(prob);
+			arr = new ArrayList<Point>();
+			arr.add(p);
 			return new BestPath("[" + printP(p) + " = "+ s +"]; ",
-					prob);
+					prob, arr);
 		}
 				
 		switch(moveObs.get(x-2).dir){
@@ -565,10 +597,14 @@ public class Controller implements Initializable {
 			prob = bp1.prob * .1;
 			parent =  p;
 			s = bp1.s;
+			arr = bp1.list;
 		}else{
 			prob = bp2.prob * .9;
 			s = bp2.s;
+			arr = bp2.list;
 		}
+		
+		arr.add(p);
 		
 		if(moveObs.get(x-2).obs == gridVals[p.x][p.y].type)
 			prob *= .9;
@@ -581,7 +617,7 @@ public class Controller implements Initializable {
 			probStr = formatter2.format(prob);
 		
 		return new BestPath(s + "[" + printP(p) + " = "
-				+ probStr +"]; " ,prob);
+				+ probStr +"]; ", prob, arr);
 	}
 	
 	private String printP(Point p){
@@ -624,9 +660,10 @@ public class Controller implements Initializable {
 	        		anchorC.setDisable(true);
 	        		anchorB.setDisable(false);
 	        		anchorA.setDisable(false);
+	        		viterbi.setDisable(false);
 	        		largeGrid = true;
 	        		error = new double[100];
-	        		//bestPoints = new ArrayList<Point>();
+	        		actProb = new double[100];
         		}
         	}
         }
@@ -685,7 +722,7 @@ public class Controller implements Initializable {
 			reader.close();
 			if(success){
 				if(grid == null || grid.buttons.length != 20){
-					grid = new SimGUI(20, 20);
+					grid = new SimGUI(20, 20, this);
 					grid.addWindowListener(new WindowAdapter(){
 						@Override
 						public void windowClosing(WindowEvent e) {
@@ -705,6 +742,56 @@ public class Controller implements Initializable {
 			success = false;
 			e.printStackTrace();
 		}
+	}
+	
+	public void activateViterbi(){
+		if(anchorD.isDisabled()){
+			anchorA.setDisable(true);
+			anchorB.setDisable(true);
+			anchorD.setDisable(false);
+		}else{
+			viterbiMode = false;
+			anchorA.setDisable(false);
+			anchorB.setDisable(false);
+			anchorD.setDisable(true);
+		}
+	}
+	
+	private void highlightBestTen(){
+		Point p;
+		for(int i = 0; i < 10; i++){
+			p = bestPoints.get(i);
+			grid.setCell(p.x, p.y, Color.CYAN);
+		}
+	}
+	
+	public void animateViterbi(){
+		new Thread(this).start();
+	}
+	
+	public void viterbiBestTen(ActionEvent e){
+		Button b = (Button)e.getSource();
+		
+		if(count > 2)
+			reset();
+		
+		if(b == viterbiTen){
+			multipleMoves(new ActionEvent(tenMoves,null));
+			viterbiCount = 10;
+		}else if(b == viterbi20){
+			multipleMoves(new ActionEvent(tenMoves,null));
+			multipleMoves(new ActionEvent(tenMoves,null));
+			viterbiCount = 20;
+		}else{
+			multipleMoves(new ActionEvent(tenMoves,null));
+			multipleMoves(new ActionEvent(tenMoves,null));
+			multipleMoves(new ActionEvent(tenMoves,null));
+			viterbiCount = 30;
+		}
+		
+		highlightBestTen();
+		
+		viterbiMode = true;
 	}
 	
 	public void computeTotalError(){
@@ -796,6 +883,44 @@ public class Controller implements Initializable {
 		anchorA.setDisable(true);
 		anchorB.setDisable(true);
 		anchorC.setDisable(false);
+		anchorD.setDisable(true);
+		viterbi.setDisable(true);
 	}
+
+	@Override
+	public void run() {		
+		ArrayList<Point> arr;
+		
+		if(!viterbiMode || grid.getColor(selectedCell.x, selectedCell.y) != Color.CYAN)
+			return;
+		
+		BestPath b = viterbi(selectedCell, viterbiCount + 1);
+		arr = b.list;
+		//System.out.println(b.s);
+		
+		updateCells();
 	
+		Point prev;
+		Double d;
+		Point tmp;
+		
+		for(int i = 0; i < viterbiCount+1; i++){
+			tmp = arr.get(i);
+			if(i > 0){
+				prev = arr.get(i-1);
+				d = gridVals[prev.x][prev.y].data.get(viterbiCount);
+				grid.setGradientColor(prev.x, prev.y, d);
+			}
+			
+			try {
+				Thread.sleep(100);
+				grid.setCell(tmp.x, tmp.y, Color.CYAN);
+				Thread.sleep(300);
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+		}
+		
+		highlightBestTen();		
+	}	
 }

@@ -5,7 +5,8 @@ import java.awt.Color;
 import java.awt.Font;
 import java.awt.GridLayout;
 import java.awt.Insets;
-
+import java.awt.Point;
+import java.awt.event.ActionListener;
 import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
@@ -28,7 +29,7 @@ public class SimGUI extends JFrame {
 	 * @param size the length of one dimension of a square tissue sample.
 	 * @param delay how long a cell waits before changing colors (in milliseconds)
 	 */
-	public SimGUI(int x, int y) {
+	public SimGUI(int x, int y, Controller c) {
 		super("AI - Project 3 GUI");
 		setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);		
 		setSize(1200, 700);
@@ -42,7 +43,13 @@ public class SimGUI extends JFrame {
 
 		for (int row = 0; row < y; row++){
 			 for (int col = 0; col < x; col++) {
-				JButton b = new JButton("");
+				PointJButton b = new PointJButton("", new Point(row, col));
+				b.addActionListener(new ActionListener(){
+					@Override
+					public void actionPerformed(java.awt.event.ActionEvent e) {
+						c.selectedCell = b.pos;
+						c.animateViterbi();
+					}});
 				b.setFont(new Font("Arial", Font.PLAIN, 10));
 				b.setMargin(new Insets(1,1,1,1));
 				b.setBackground(Color.WHITE);
@@ -57,6 +64,17 @@ public class SimGUI extends JFrame {
 		this.add(panel);
 		this.setVisible(true);
 	}
+	
+	private class PointJButton extends JButton{
+		private static final long serialVersionUID = 1L;
+		Point pos;
+
+		public PointJButton(String s, Point p){
+			super(s);
+			pos = p;
+		}
+	}
+	
 
 	/**
 	* Sets the color of the cell located at a particular position

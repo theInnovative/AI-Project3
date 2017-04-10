@@ -17,6 +17,7 @@ public class Cell {
 	Point self = null;
 	ArrayList<Double> data;
 	Type type;
+	//ArrayList<Point> bPs[] = new ArrayList<Point>[100];
 	
 	public enum Type { NORMAL, HIGHWAY, HARD, BLOCKED }
 
