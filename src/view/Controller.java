@@ -731,7 +731,7 @@ public class Controller implements Initializable, Runnable {
 			}
 			reader.close();
 			if(success){
-				if(grid == null || grid.buttons.length != MAPSIZE){//////////////////////////////
+				if(grid == null || grid.buttons.length != MAPSIZE){
 					grid = new SimGUI(MAPSIZE, MAPSIZE, this);
 					grid.addWindowListener(new WindowAdapter(){
 						@Override
@@ -771,7 +771,10 @@ public class Controller implements Initializable, Runnable {
 		Point p;
 		for(int i = 0; i < 10; i++){
 			p = bestPoints.get(i);
-			grid.setCell(p.x, p.y, Color.CYAN);
+			if(i == 0)
+				grid.setCell(p.x, p.y, Color.BLUE);
+			else
+				grid.setCell(p.x, p.y, Color.CYAN);
 		}
 	}
 	
