@@ -17,7 +17,7 @@ public class Cell {
 	Point self = null;
 	ArrayList<Double> data;
 	Type type;
-	//ArrayList<Point> bPs[] = new ArrayList<Point>[100];
+	Controller.BestPath[] bPs = new Controller.BestPath[101];
 	
 	public enum Type { NORMAL, HIGHWAY, HARD, BLOCKED }
 

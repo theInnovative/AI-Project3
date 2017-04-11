@@ -13,10 +13,7 @@ import java.net.URL;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.util.ArrayList;
-import java.util.PriorityQueue;
 import java.util.ResourceBundle;
-import java.util.Timer;
-
 import javafx.application.Platform;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
@@ -69,10 +66,9 @@ public class Controller implements Initializable, Runnable {
 	@FXML
 	public Button viterbiMax;
 	@FXML
-	public Button viterbi20;
+	public Button viterbi50;
 	@FXML
 	public Button viterbiTen;
-
 	@FXML
 	public AnchorPane anchorA;
 	@FXML
@@ -82,6 +78,7 @@ public class Controller implements Initializable, Runnable {
 	@FXML
 	public AnchorPane anchorD;
 
+	private final int MAPSIZE = 50;
 	private SimGUI grid;
 	private Cell gridVals[][];
 	private int count, viterbiCount;
@@ -106,14 +103,16 @@ public class Controller implements Initializable, Runnable {
 	}
 	
 	public class BestPath{
+		int nonce;
 		String s;
 		double prob;
 		ArrayList<Point> list = new ArrayList<Point>();
 		
-		public BestPath(String s, double prob, ArrayList<Point> list){
+		public BestPath(String s, double prob, ArrayList<Point> list, int nonce){
 			this.s = s;
 			this.prob = prob;
 			this.list = list;
+			this.nonce = nonce;
 		}
 		
 	}
@@ -136,12 +135,12 @@ public class Controller implements Initializable, Runnable {
 	public void generateTruthData(){
 		gtd.setVisible(false);
 		for(int X = 0; X < 10; X++){
-			gridVals = new Cell[20][20];
+			gridVals = new Cell[MAPSIZE][MAPSIZE];
 			String moves = "", obs = "";
 			Cell.Type o;
 			ArrayList<Point> points;
 			
-			int totalLeft = 20 * 20;
+			int totalLeft = MAPSIZE * MAPSIZE;
 			int nCells = (int)(.5 * totalLeft);
 			int hCells = (int)(.2 * totalLeft);
 			int tCells = (int)(.2 * totalLeft);
@@ -170,7 +169,8 @@ public class Controller implements Initializable, Runnable {
 				Point start;
 				points = new ArrayList<Point>();
 				do{
-					start = new Point((int)(Math.random()*20), (int)(Math.random()*20));
+					start = new Point((int)(Math.random()*MAPSIZE),
+							(int)(Math.random()*MAPSIZE));
 				}while(!validPos(start.x,start.y));
 				points.add(start);
 				
@@ -224,8 +224,8 @@ public class Controller implements Initializable, Runnable {
 		
 		try {
 			file = new FileWriter(path + name, false);
-			for(int i = 0; i < 20; i++){
-				for(int j = 0; j < 20; j++){
+			for(int i = 0; i < MAPSIZE; i++){
+				for(int j = 0; j < MAPSIZE; j++){
 					switch(gV[i][j].type){
 					case NORMAL: 	file.write('N');	break;
 					case HARD:		file.write('T');	break;
@@ -344,8 +344,6 @@ public class Controller implements Initializable, Runnable {
 			case 'T':	typeEntered = Cell.Type.HARD;	break;
 			default:	typeEntered = Cell.Type.HIGHWAY;
 			}
-			
-			//Display actual placement
 		}else{
 			if((RadioButton)type.getSelectedToggle() == normal)
 				typeEntered = Cell.Type.NORMAL;
@@ -400,7 +398,7 @@ public class Controller implements Initializable, Runnable {
 			for(int j = 0; j < gridVals[0].length; j++){
 				if(gridVals[i][j].type == Cell.Type.BLOCKED)
 					continue;
-				double probability = d[i][j]/total;//(int)(d[i][j]/total * 1000000)/1000000.0;
+				double probability = d[i][j]/total;
 				gridVals[i][j].data.add(probability);
 			}
 		
@@ -544,7 +542,7 @@ public class Controller implements Initializable, Runnable {
 		}
 		
 		grid.setLabel1(line);
-		if(count <= 15)
+		if(count <= 20)
 			setBestPath(p);
 	}
 	
@@ -556,20 +554,26 @@ public class Controller implements Initializable, Runnable {
 	}
 	
 	private void setBestPath(Point p){
-		grid.setLabel2("Best Path to "+ printP(p) +": " + viterbi(p, count).s);
+		int nonce = (int)(Math.random()*999999);
+		grid.setLabel2("Best Path to "+ printP(p) +": " + viterbi(p, count, nonce).s);
 	}
 	
-	private BestPath viterbi(Point p, int x){
+	@SuppressWarnings("unchecked")
+	private BestPath viterbi(Point p, int x, int n){
 		Point parent;
 		double prob;
-		BestPath bp1, bp2;
+		BestPath b, bp1, bp2;
 		String s, probStr;
 		NumberFormat formatter1 = new DecimalFormat("0.###E0");
 		NumberFormat formatter2 = new DecimalFormat(".###");
 		ArrayList<Point> arr;
 	     
 		if(!validPos(p.x, p.y))
-			return new BestPath("", 0.0, null);
+			return new BestPath("", 0.0, null, 0);
+		
+		if(gridVals[p.x][p.y].bPs[x-1] != null 
+				&& gridVals[p.x][p.y].bPs[x-1].nonce == n)
+			return gridVals[p.x][p.y].bPs[x-1];
 		
 		if(x < 2){
 			prob = gridVals[p.x][p.y].data.get(0);
@@ -579,8 +583,12 @@ public class Controller implements Initializable, Runnable {
 				s = formatter2.format(prob);
 			arr = new ArrayList<Point>();
 			arr.add(p);
-			return new BestPath("[" + printP(p) + " = "+ s +"]; ",
-					prob, arr);
+			
+			b = new BestPath("[" + printP(p) + " = "+ s +"]; ",
+					prob, arr, n);
+			gridVals[p.x][p.y].bPs[0] = b;
+			
+			return b;
 		}
 				
 		switch(moveObs.get(x-2).dir){
@@ -590,18 +598,18 @@ public class Controller implements Initializable, Runnable {
 		default:	parent = new Point(p.x, p.y - 1);
 		}
 		
-		bp1 = viterbi(p,		x - 1);
-		bp2 = viterbi(parent,	x - 1);
+		bp1 = viterbi(p,		x - 1, n);
+		bp2 = viterbi(parent,	x - 1, n);
 		
 		if(bp1.prob * .1 > bp2.prob *.9){
 			prob = bp1.prob * .1;
 			parent =  p;
 			s = bp1.s;
-			arr = bp1.list;
+			arr = (ArrayList<Point>) bp1.list.clone();
 		}else{
 			prob = bp2.prob * .9;
 			s = bp2.s;
-			arr = bp2.list;
+			arr = (ArrayList<Point>) bp2.list.clone();
 		}
 		
 		arr.add(p);
@@ -616,8 +624,10 @@ public class Controller implements Initializable, Runnable {
 		else
 			probStr = formatter2.format(prob);
 		
-		return new BestPath(s + "[" + printP(p) + " = "
-				+ probStr +"]; ", prob, arr);
+		b = new BestPath(s + "[" + printP(p) + " = "
+				+ probStr +"]; ", prob, arr, n);
+		gridVals[p.x][p.y].bPs[x-1] = b;
+		return b;
 	}
 	
 	private String printP(Point p){
@@ -701,16 +711,16 @@ public class Controller implements Initializable, Runnable {
 	
 	private void loadGrid(String filepath){
 		File file = new File(filepath);
-		double d = 1.0/360.0;
+		double d = 1.0/(MAPSIZE*MAPSIZE*.9);
 		String line;
-		gridVals = new Cell[20][20];
+		gridVals = new Cell[MAPSIZE][MAPSIZE];
 
 		try{
 			BufferedReader reader = new BufferedReader(new FileReader(file));
 			
-			for(int i = 0; i < 20; i++){
+			for(int i = 0; i < MAPSIZE; i++){
 				line = reader.readLine();
-				for(int j = 0; j < 20; j++){
+				for(int j = 0; j < MAPSIZE; j++){
 					switch(line.charAt(j)){
 					case 'N':	gridVals[i][j] = new Cell(i,j, d);	break;
 					case 'T':	gridVals[i][j] = new Cell(i,j, Cell.Type.HARD, d);		break;
@@ -721,8 +731,8 @@ public class Controller implements Initializable, Runnable {
 			}
 			reader.close();
 			if(success){
-				if(grid == null || grid.buttons.length != 20){
-					grid = new SimGUI(20, 20, this);
+				if(grid == null || grid.buttons.length != MAPSIZE){//////////////////////////////
+					grid = new SimGUI(MAPSIZE, MAPSIZE, this);
 					grid.addWindowListener(new WindowAdapter(){
 						@Override
 						public void windowClosing(WindowEvent e) {
@@ -778,15 +788,13 @@ public class Controller implements Initializable, Runnable {
 		if(b == viterbiTen){
 			multipleMoves(new ActionEvent(tenMoves,null));
 			viterbiCount = 10;
-		}else if(b == viterbi20){
-			multipleMoves(new ActionEvent(tenMoves,null));
-			multipleMoves(new ActionEvent(tenMoves,null));
-			viterbiCount = 20;
+		}else if(b == viterbi50){
+			multipleMoves(new ActionEvent(fifty,null));
+			viterbiCount = 50;
 		}else{
-			multipleMoves(new ActionEvent(tenMoves,null));
-			multipleMoves(new ActionEvent(tenMoves,null));
-			multipleMoves(new ActionEvent(tenMoves,null));
-			viterbiCount = 30;
+			multipleMoves(new ActionEvent(fifty,null));
+			multipleMoves(new ActionEvent(fifty,null));
+			viterbiCount = 100;
 		}
 		
 		highlightBestTen();
@@ -794,12 +802,28 @@ public class Controller implements Initializable, Runnable {
 		viterbiMode = true;
 	}
 	
+	private double[] pathError(ArrayList<Point> arr){
+		double d[] = new double[101];
+		Point a, b;
+		
+		for(int i = 0; i < 101; i++){
+			a = arr.get(i);
+			b = lD.points.get(i);
+			d[i] = Point.distance(a.x, a.y, b.x, b.y);
+		}
+		return d;
+	}
+	
 	public void computeTotalError(){
 		String pathname;
 		Cell copy[][];
 		double err[][] = new double[100][];
 		double act[][] = new double[100][];
+		double pathErr[][] = new double[100][];
+		int nonce;
 		count = 1;
+		Point p;
+		ArrayList<Point> arr;
 		
 		for(int i = 0; i < 10; i++){
 			success = true;
@@ -813,40 +837,61 @@ public class Controller implements Initializable, Runnable {
 				error = new double[100];
 				actProb = new double[100];
 				multipleMoves(new ActionEvent(allMoves,null));
+				viterbiMode = true;
 				err[(i*10)+j] = error;
 				act[(i*10)+j] = actProb;
+				
+				p = bestPoints.get(0);
+				
+				nonce = (int)(Math.random() * 999999);
+				BestPath b = viterbi(p, 101, nonce);
+				arr = b.list;
+				
+				pathErr[(i*10)+j] = pathError(arr);
 				count = 1;
 			}
 			printErrorAndProbs(i, err, act);
 			largeGrid = false;
 		}
 		
-		printAllErrorAndProbs(err, act);
+		printAllErrorAndProbs(err, act, pathErr);
 	}
 
-	private void printAllErrorAndProbs(double err[][], double act[][]){
+	private void printAllErrorAndProbs(double err[][], double act[][], double pathErr[][]){
 		String pathname1 ="Trial Grids\\All-Error.txt";
 		String pathname2 ="Trial Grids\\All-Probabilities.txt";
-		FileWriter file1, file2;
+		String pathname3 ="Trial Grids\\All-Best-Path-Error.txt";
+		FileWriter file1, file2, file3;
 		NumberFormat formatter = new DecimalFormat("###.###");
 		NumberFormat formatter1 = new DecimalFormat("###.##########");
 		
 		try {
 			file1 = new FileWriter(pathname1, false);
 			file2 = new FileWriter(pathname2, false);
+			file3 = new FileWriter(pathname3, false);
 			for(int i = 0; i < 100; i++){
 				file1.write((i+1) + ":\t");
 				file2.write((i+1) + ":\t");
+				file3.write((i) + ":\t");
 				for(int j = 0; j < 100; j++){
 					file1.write(formatter.format(err[j][i]) + "\t");
 					file2.write(formatter1.format(act[j][i]) + "\t");
+					file3.write(formatter.format(pathErr[j][i]) + "\t");
 				}
 				file1.write(System.getProperty("line.separator"));
 				file2.write(System.getProperty("line.separator"));
+				file3.write(System.getProperty("line.separator"));
+			}
+			
+
+			file3.write("100:\t");
+			for(int i = 0; i < 100; i++){
+				file3.write(formatter.format(pathErr[i][100]) + "\t");
 			}
 			
 			file1.close();
 			file2.close();
+			file3.close();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -894,9 +939,9 @@ public class Controller implements Initializable, Runnable {
 		if(!viterbiMode || grid.getColor(selectedCell.x, selectedCell.y) != Color.CYAN)
 			return;
 		
-		BestPath b = viterbi(selectedCell, viterbiCount + 1);
+		int nonce = (int)(Math.random() * 999999);
+		BestPath b = viterbi(selectedCell, viterbiCount + 1, nonce);
 		arr = b.list;
-		//System.out.println(b.s);
 		
 		updateCells();
 	
@@ -913,7 +958,7 @@ public class Controller implements Initializable, Runnable {
 			}
 			
 			try {
-				Thread.sleep(100);
+				Thread.sleep(50);
 				grid.setCell(tmp.x, tmp.y, Color.CYAN);
 				Thread.sleep(300);
 			} catch (InterruptedException e) {
